@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CraftFlow - Production Ready</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-800">
+<div class="max-w-6xl mx-auto">
+<div class="mb-6 flex justify-between items-end">
+<div>
+<h1 class="text-3xl font-extrabold text-blue-700 tracking-tight"><i class="fa-solid fa-industry mr-2"></i>CraftFlow <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">Production Mode</span></h1>
+<p class="text-gray-500 mt-1">สร้างไฟล์ไดคัทพร้อมส่งโรงพิมพ์และเครื่องตัด (Machine-Ready SVG)</p>
+</div>
+</div>
+<div class="flex flex-col lg:flex-row gap-6">
+<!-- แผงควบคุมตั้งค่า (Control Panel) -->
+<div class="w-full lg:w-1/3 flex flex-col gap-4">
+<!-- 1. ตั้งค่าขนาด -->
+<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 border-t-4 border-t-blue-500">
+<h2 class="text-lg font-bold mb-4"><i class="fa-solid fa-cube text-blue-500 mr-2"></i> 1. ตั้งค่าขนาดกล่อง (มิลลิเมตร)</h2>
+<div class="space-y-3">
+<div>
+<label class="block text-sm font-semibold text-gray-700">ความกว้าง (Width)</label>
+<input type="number" id="width" value="43" min="10" class="mt-1 w-full rounded-md border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+</div>
+<div>
+<label class="block text-sm font-semibold text-gray-700">ความลึก (Length)</label>
+<input type="number" id="length" value="43" min="10" class="mt-1 w-full rounded-md border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+</div>
+<div>
+<label class="block text-sm font-semibold text-gray-700">ความสูง (Height)</label>
+<input type="number" id="height" value="113" min="10" class="mt-1 w-full rounded-md border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+</div>
+<div>
+<label class="block text-sm font-semibold text-gray-700">ความกว้างลิ้นกาว (Glue Flap)</label>
+<input type="number" id="glue" value="15" min="5" class="mt-1 w-full rounded-md border-gray-300 border p-2 bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+</div>
+</div>
+</div>
+<!-- 2. ประเมินการผลิต -->
+<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+<h2 class="text-lg font-bold mb-4"><i class="fa-solid fa-clipboard-check text-green-500 mr-2"></i> 2. ข้อมูลเพื่อการผลิต</h2>
+<div class="space-y-3">
+<div class="flex justify-between items-center border-b pb-2">
+<span class="text-sm text-gray-600">ขนาดไฟล์กางออก (ก x ย)</span>
+<span id="canvas-size" class="font-bold text-gray-900">0 x 0 mm</span>
+</div>
+<div class="flex justify-between items-center border-b pb-2">
+<span class="text-sm text-gray-600">กระดาษขั้นต่ำที่ต้องใช้</span>
+<span id="paper-size" class="font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">A4</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm text-gray-600">ความยาวเส้นตัดเลเซอร์รวม</span>
+<span id="cut-length" class="font-bold text-gray-900">0 m</span>
+</div>
+</div>
+</div>
+<!-- 3. ปุ่ม Export สำหรับโรงงาน -->
+<button onclick="downloadProductionSVG()" class="w-full bg-gray-900 text-white font-bold py-4 px-4 rounded-xl hover:bg-black transition-all shadow-lg flex justify-center items-center gap-2">
+<i class="fa-solid fa-download"></i> ดาวน์โหลด Production SVG
+</button>
+<p class="text-xs text-gray-500 text-center">*ไฟล์ที่โหลดจะซ่อนตัวเลขสัดส่วน และฝังค่า mm สำหรับ Illustrator/AutoCAD อัตโนมัติ</p>
+</div>
+<!-- แผง Preview -->
+<div class="w-full lg:w-2/3 bg-white border border-gray-200 shadow-sm rounded-xl p-4 flex flex-col relative" style="min-height: 600px;">
+<div class="flex justify-between items-center mb-2 px-2">
+<h2 class="text-md font-bold text-gray-700">Blueprint Preview</h2>
+</div>
+<!-- พื้นที่วาด SVG -->
+<div id="svg-container" class="flex-1 bg-gray-100 border border-gray-300 rounded-lg flex justify-center items-center overflow-auto p-4 relative" style="background-image: radial-gradient(#d1d5db 1px, transparent 1px); background-size: 20px 20px;">
+<!-- SVG Inject -->
+</div>
+</div>
+</div>
+</div>
+<script>
+
+        function drawDieline() {
+
+            // รับค่าจาก Input
+
+            const w = parseFloat(document.getElementById('width').value) || 0;
+
+            const l = parseFloat(document.getElementById('length').value) || 0;
+
+            const h = parseFloat(document.getElementById('height').value) || 0;
+
+            const glue_flap = parseFloat(document.getElementById('glue').value) || 15;
+
+            const margin = 10; 
+
+            const flap_h = l / 2; 
+
+            // คำนวณแกน X
+
+            const x0 = margin;
+
+            const x1 = x0 + glue_flap;
+
+            const x2 = x1 + l;
+
+            const x3 = x2 + w;
+
+            const x4 = x3 + l;
+
+            const x5 = x4 + w;
+
+            // คำนวณแกน Y
+
+            const y0 = margin;
+
+            const y1 = y0 + flap_h;
+
+            const y2 = y1 + h;
+
+            const y3 = y2 + flap_h;
+
+            const svg_width = x5 + margin;
+
+            const svg_height = y3 + margin;
+
+            // === วิเคราะห์ข้อมูลเพื่อการผลิต ===
+
+            // 1. ขนาด Layout รวม
+
+            document.getElementById('canvas-size').innerText = `${svg_width.toFixed(1)} x ${svg_height.toFixed(1)} mm`;
+
+            // 2. หากระดาษมาตรฐานที่เล็กที่สุดที่ใส่ชิ้นงานนี้ได้
+
+            let paperRequired = "Custom / ม้วน (Roll)";
+
+            const max_dim = Math.max(svg_width, svg_height);
+
+            const min_dim = Math.min(svg_width, svg_height);
+
+            if (max_dim <= 297 && min_dim <= 210) paperRequired = "A4 (210 x 297 mm)";
+
+            else if (max_dim <= 420 && min_dim <= 297) paperRequired = "A3 (297 x 420 mm)";
+
+            else if (max_dim <= 594 && min_dim <= 420) paperRequired = "A2 (420 x 594 mm)";
+
+            else if (max_dim <= 841 && min_dim <= 594) paperRequired = "A1 (594 x 841 mm)";
+
+            else if (max_dim <= 1189 && min_dim <= 841) paperRequired = "A0 (841 x 1189 mm)";
+
+            document.getElementById('paper-size').innerText = paperRequired;
+
+            // 3. ความยาวเส้นตัดรวม (เมตร) สำหรับตีราคาร้านเลเซอร์
+
+            const total_cut_length_mm = (h * 3) + (l * 4) + (w * 4) + (flap_h * 10);
+
+            document.getElementById('cut-length').innerText = (total_cut_length_mm / 1000).toFixed(2) + ' m';
+
+            // === สร้าง SVG (แยกเลเยอร์ชัดเจน) ===
+
+            const svgContent = `
+<!-- แทรก property width/height เป็น mm เพื่อให้โปรแกรมอุตสาหกรรมรู้สเกลจริง -->
+<svg id="dieline-svg" xmlns="http://www.w3.org/2000/svg" 
+
+                     viewBox="0 0 ${svg_width} ${svg_height}" 
+
+                     width="${svg_width}mm" height="${svg_height}mm"
+
+                     class="max-w-full max-h-[500px] shadow-md bg-white">
+<!-- เลเยอร์ 1: เส้นพับ (Score / Crease Lines) -->
+<g id="Layer_Fold" stroke="#FF0000" stroke-width="1" stroke-dasharray="4,4" fill="none">
+<line x1="${x1}" y1="${y1}" x2="${x1}" y2="${y2}"/>
+<line x1="${x2}" y1="${y1}" x2="${x2}" y2="${y2}"/>
+<line x1="${x3}" y1="${y1}" x2="${x3}" y2="${y2}"/>
+<line x1="${x4}" y1="${y1}" x2="${x4}" y2="${y2}"/>
+<line x1="${x1}" y1="${y1}" x2="${x5}" y2="${y1}"/>
+<line x1="${x1}" y1="${y2}" x2="${x5}" y2="${y2}"/>
+</g>
+<!-- เลเยอร์ 2: เส้นตัด (Cut Lines / Die-cut) -->
+<g id="Layer_Cut" stroke="#000000" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M${x0},${y1} L${x0},${y2} M${x0},${y1} L${x1},${y1} M${x0},${y2} L${x1},${y2}"/>
+<path d="M${x1},${y0} L${x5},${y0} M${x1},${y3} L${x5},${y3}"/>
+<path d="M${x1},${y0} L${x1},${y1} M${x2},${y0} L${x2},${y1} M${x3},${y0} L${x3},${y1} M${x4},${y0} L${x4},${y1} M${x5},${y0} L${x5},${y1}"/>
+<path d="M${x1},${y2} L${x1},${y3} M${x2},${y2} L${x2},${y3} M${x3},${y2} L${x3},${y3} M${x4},${y2} L${x4},${y3} M${x5},${y2} L${x5},${y3}"/>
+<line x1="${x5}" y1="${y1}" x2="${x5}" y2="${y2}" />
+</g>
+<!-- เลเยอร์ 3: ตัวเลขและเส้นไกด์ (จะถูกลบออกตอนดาวน์โหลด) -->
+<g id="Layer_Annotations" fill="#64748b" font-size="6" font-family="sans-serif" text-anchor="middle">
+<text x="${x1 + l/2}" y="${y1 + h/2}">${l}x${h}</text>
+<text x="${x2 + w/2}" y="${y1 + h/2}">${w}x${h}</text>
+<text x="${x3 + l/2}" y="${y1 + h/2}">${l}x${h}</text>
+<text x="${x4 + w/2}" y="${y1 + h/2}">${w}x${h}</text>
+</g>
+</svg>
+
+            `;
+
+            document.getElementById('svg-container').innerHTML = svgContent;
+
+        }
+
+        // ฟังก์ชันดาวน์โหลด (เตรียมไฟล์ให้พร้อมเข้าโรงงาน)
+
+        function downloadProductionSVG() {
+
+            // 1. Copy SVG ออกมาเพื่อปรับแต่งก่อนเซฟ โดยไม่กระทบหน้าพรีวิว
+
+            const originalSvg = document.getElementById('dieline-svg');
+
+            const cloneSvg = originalSvg.cloneNode(true);
+
+            // 2. ลบ CSS Class ออก เพื่อให้เป็นไฟล์ SVG ดิบๆ สะอาดๆ
+
+            cloneSvg.removeAttribute('class');
+
+            // 3. ลบเลเยอร์ตัวอักษรออก (โรงงานต้องการแค่เส้นตัดกับเส้นพับ)
+
+            const annotations = cloneSvg.querySelector('#Layer_Annotations');
+
+            if(annotations) annotations.remove();
+
+            // 4. สร้างไฟล์ดาวน์โหลด
+
+            const svgData = new XMLSerializer().serializeToString(cloneSvg);
+
+            const blob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+
+            const url = URL.createObjectURL(blob);
+
+            const w = document.getElementById('width').value;
+
+            const l = document.getElementById('length').value;
+
+            const h = document.getElementById('height').value;
+
+            const link = document.createElement("a");
+
+            link.href = url;
+
+            link.download = `Production_Box_${w}x${l}x${h}mm.svg`;
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            document.body.removeChild(link);
+
+        }
+
+        // จับตาดูการพิมพ์ตัวเลข
+
+        document.querySelectorAll('input').forEach(input => {
+
+            input.addEventListener('input', drawDieline);
+
+        });
+
+        drawDieline();
+</script>
+</body>
+</html>
+ 
